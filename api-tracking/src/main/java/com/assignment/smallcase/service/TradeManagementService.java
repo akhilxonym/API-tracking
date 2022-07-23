@@ -6,10 +6,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.assignment.smallcase.exception.NotEnoughQuantityToSellException;
+import com.assignment.smallcase.exception.PortfolioTrackingApiException;
 import com.assignment.smallcase.model.Holding;
 import com.assignment.smallcase.model.Stock;
 import com.assignment.smallcase.model.Trade;
@@ -36,14 +39,16 @@ public class TradeManagementService {
 			executeTrade(trade);
 			addTradeResponse.setMessage("Trade Added Successfully");
 			tradeRepository.save(trade);
-		}catch(Exception e) {
-			addTradeResponse.setMessage("Trade Cannot be Added");
+		}catch(final PortfolioTrackingApiException folioTrackingApi) {
+			Throwable temp=ExceptionUtils.getCause(folioTrackingApi);
+			if(temp instanceof NotEnoughQuantityToSellException)
+					throw new NotEnoughQuantityToSellException() ;
 		}
 		return ResponseEntity.ok().body(addTradeResponse);
 		
 	}
 	
-	private void executeTrade(Trade trade) throws Exception {
+	private void executeTrade(Trade trade) throws PortfolioTrackingApiException {
 		Optional<UserPortfolio> userPortfolioDoc=portfolioRepo.findById("e82b2e4a-942c-493e-9fb6-5ba3eceef145");
 		UserPortfolio userPortfolio=null;
 		if(!userPortfolioDoc.isEmpty()) {
@@ -80,7 +85,6 @@ public class TradeManagementService {
 		}else {
 			
 			// if SELL Trade
-			
 			if(userPortfolio!=null) {
 				Holding userStockHolding=userPortfolio.getHoldings().get(trade.getStock().getId());
 				if(userStockHolding!=null) {
@@ -94,17 +98,17 @@ public class TradeManagementService {
 					}
 					else {
 						//Throw Not enough quantity to sell
-						throw new Exception();
+						throw new NotEnoughQuantityToSellException();
 					}
 				}else {
-					// Throw Exceptio Stock Holding Doesn't Exist
-					throw new Exception("Holding Doesn't Exist");
+					// Throw Exceptioo Stock Holding Doesn't Exist
+					throw new NotEnoughQuantityToSellException();
 
 				}
 				userPortfolio.getHoldings().put(trade.getStock().getId(), userStockHolding);
 			}else {
 				// THROW Exception Portfolio Doesn't Exist
-				throw new Exception("Portfolio Doesn't Exist");
+				throw new NotEnoughQuantityToSellException();
 
 			}
 			

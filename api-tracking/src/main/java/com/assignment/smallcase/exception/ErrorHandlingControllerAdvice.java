@@ -21,6 +21,13 @@ public class ErrorHandlingControllerAdvice {
     return error;
   }
 
-
+  @ExceptionHandler(NotEnoughQuantityToSellException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  AddTradeResponse onNotEnoughQuantitySellException(NotEnoughQuantityToSellException e) {
+    AddTradeResponse error = new AddTradeResponse();
+    error.setMessage(e.getMessage());
+    return error;
+  }
 
 }

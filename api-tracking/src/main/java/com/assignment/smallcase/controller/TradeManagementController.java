@@ -12,5 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class TradeManagementController {
 	
 	private static final Logger logger= LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+	
 
 }

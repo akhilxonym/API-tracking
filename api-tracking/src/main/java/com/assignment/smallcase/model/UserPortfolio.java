@@ -4,11 +4,12 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 import org.springframework.data.annotation.Id;
-
+import org.springframework.data.mongodb.core.mapping.Document;
+@Document(collection="userPortfolio")
 public class UserPortfolio {
 	@Id
 	private String id;
-	private Map<Stock,Holding> holdings;
+	private Map<String,Holding> holdings;
 	private Double totalInvestment;
 	private Double currentValue;
 	public String getId() {
@@ -17,10 +18,10 @@ public class UserPortfolio {
 	public void setId(String id) {
 		this.id = id;
 	}
-	public Map<Stock, Holding> getHoldings() {
+	public Map<String, Holding> getHoldings() {
 		return holdings;
 	}
-	public void setHoldings(Map<Stock, Holding> holdings) {
+	public void setHoldings(Map<String, Holding> holdings) {
 		this.holdings = holdings;
 	}
 	public Double getTotalInvestment() {
@@ -40,5 +41,6 @@ public class UserPortfolio {
 		return "UserPortfolio [id=" + id + ", holdings=" + holdings + ", totalInvestment=" + totalInvestment
 				+ ", currentValue=" + currentValue + "]";
 	}
+
 	
 }

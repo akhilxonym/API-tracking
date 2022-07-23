@@ -5,8 +5,6 @@ import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
 import com.assignment.smallcase.repository.StockRepository;
 import com.assignment.smallcase.request.AddTradeRequest;
@@ -24,11 +22,20 @@ public class QuantityAndPriceValidator implements ConstraintValidator<QtyAndPric
 				return false;
 			}
 		if(addTradeRequest.getQty()>9999)
-			{return false;}
+		{	context.disableDefaultConstraintViolation();
+		context.buildConstraintViolationWithTemplate("Qantity size should be a less than 10K").addConstraintViolation();
+		return false;
+	}
 		if(addTradeRequest.getPrice()<=0)
-			{return false;}
-		if(stockRepo.findById(addTradeRequest.getStock().getId()).get()==null)
-			{return false;}
+		{	context.disableDefaultConstraintViolation();
+		context.buildConstraintViolationWithTemplate("Price should be a positive integer").addConstraintViolation();
+		return false;
+	}
+		if(stockRepo.findById(addTradeRequest.getStock().getId()).isEmpty())
+		{	context.disableDefaultConstraintViolation();
+		context.buildConstraintViolationWithTemplate("Invalid Stock").addConstraintViolation();
+		return false;
+	}
 		return true;
 		
 	}

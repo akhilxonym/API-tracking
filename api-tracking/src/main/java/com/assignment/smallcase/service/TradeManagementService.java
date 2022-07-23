@@ -30,15 +30,15 @@ public class TradeManagementService {
 	@Autowired
 	private ExternalService extService;
 	public ResponseEntity<AddTradeResponse> addTrade(AddTradeRequest addTradeRequest){
+		AddTradeResponse addTradeResponse=new AddTradeResponse();
 		Trade trade=createTradeModelFromRequest(addTradeRequest);
 		try {
 			executeTrade(trade);
+			addTradeResponse.setMessage("Trade Added Successfully");
+			tradeRepository.save(trade);
 		}catch(Exception e) {
-			
+			addTradeResponse.setMessage("Trade Cannot be Added");
 		}
-		AddTradeResponse addTradeResponse=new AddTradeResponse();
-		addTradeResponse.setMessage("Trade Added Successfully");
-		tradeRepository.save(trade);
 		return ResponseEntity.ok().body(addTradeResponse);
 		
 	}
@@ -51,7 +51,7 @@ public class TradeManagementService {
 		}
 		if(trade.getType().equals(TradeType.BUY)) {
 			if(userPortfolio!=null) {
-				Holding userStockHolding=userPortfolio.getHoldings().get(trade.getStock());
+				Holding userStockHolding=userPortfolio.getHoldings().get(trade.getStock().getId());
 				if(userStockHolding!=null) {
 					int updatedQty=userStockHolding.getQty()+trade.getQty();
 					userStockHolding.setAvgBuy((userStockHolding.getAvgBuy()*userStockHolding.getQty() + trade.getQty()*trade.getPrice())/updatedQty);
@@ -82,7 +82,7 @@ public class TradeManagementService {
 			// if SELL Trade
 			
 			if(userPortfolio!=null) {
-				Holding userStockHolding=userPortfolio.getHoldings().get(trade.getStock());
+				Holding userStockHolding=userPortfolio.getHoldings().get(trade.getStock().getId());
 				if(userStockHolding!=null) {
 					// check if sufficient quantity available to sell
 					if(userStockHolding.getQty()>=trade.getQty()) {
@@ -94,13 +94,18 @@ public class TradeManagementService {
 					}
 					else {
 						//Throw Not enough quantity to sell
+						throw new Exception();
 					}
 				}else {
 					// Throw Exceptio Stock Holding Doesn't Exist
+					throw new Exception("Holding Doesn't Exist");
+
 				}
 				userPortfolio.getHoldings().put(trade.getStock().getId(), userStockHolding);
 			}else {
 				// THROW Exception Portfolio Doesn't Exist
+				throw new Exception("Portfolio Doesn't Exist");
+
 			}
 			
 		}

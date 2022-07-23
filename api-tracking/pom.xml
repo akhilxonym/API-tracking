@@ -11,7 +11,7 @@
 	<groupId>com.assignment.smallcase</groupId>
 	<artifactId>api-tracking</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>API-Tracking</name>
+	<name>Portfolio-Api-Tracking</name>
 	<description>Simple API tracking assignment</description>
 	<properties>
 		<java.version>11</java.version>

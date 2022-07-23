@@ -29,4 +29,5 @@ public class Holding {
 		return "Holding [qty=" + qty + ", ticker=" + ticker + ", avgBuy=" + avgBuy + "]";
 	}
 	
+	
 }

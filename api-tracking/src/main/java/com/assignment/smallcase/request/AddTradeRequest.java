@@ -2,7 +2,8 @@ package com.assignment.smallcase.request;
 
 import com.assignment.smallcase.model.Stock;
 import com.assignment.smallcase.model.TradeType;
-
+import com.assignment.smallcase.utility.QtyAndPriceValidator;
+@QtyAndPriceValidator
 public class AddTradeRequest {
 	private Stock stock;
 	private int qty;

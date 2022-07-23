@@ -7,10 +7,18 @@ import org.springframework.data.annotation.Id;
 public class Trade {
 	@Id
 	private String id;
+	private String userId;
 	private TradeType type;
 	private int qty;
 	private Stock stock;
 	private Double price;
+	
+	public String getUserId() {
+		return userId;
+	}
+	public void setUserId(String userId) {
+		this.userId = userId;
+	}
 	public String getId() {
 		return id;
 	}
@@ -35,15 +43,17 @@ public class Trade {
 	public void setPrice(Double price) {
 		this.price = price;
 	}
-	@Override
-	public String toString() {
-		return "Trade [id=" + id + ", type=" + type + ", qty=" + qty + ", stock=" + stock + ", price=" + price + "]";
-	}
+	
 	public Stock getStock() {
 		return stock;
 	}
 	public void setStock(Stock stock) {
 		this.stock = stock;
+	}
+	@Override
+	public String toString() {
+		return "Trade [id=" + id + ", userId=" + userId + ", type=" + type + ", qty=" + qty + ", stock=" + stock
+				+ ", price=" + price + "]";
 	}
 	
 }

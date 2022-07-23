@@ -32,6 +32,8 @@ public class TradeManagementService {
 	
 	@Autowired
 	private ExternalService extService;
+	public static final String USER_ID="e82b2e4a-942c-493e-9fb6-5ba3eceef145";
+	
 	public ResponseEntity<AddTradeResponse> addTrade(AddTradeRequest addTradeRequest){
 		AddTradeResponse addTradeResponse=new AddTradeResponse();
 		Trade trade=createTradeModelFromRequest(addTradeRequest);
@@ -49,7 +51,7 @@ public class TradeManagementService {
 	}
 	
 	private void executeTrade(Trade trade) throws PortfolioTrackingApiException {
-		Optional<UserPortfolio> userPortfolioDoc=portfolioRepo.findById("e82b2e4a-942c-493e-9fb6-5ba3eceef145");
+		Optional<UserPortfolio> userPortfolioDoc=portfolioRepo.findById(USER_ID);
 		UserPortfolio userPortfolio=null;
 		if(!userPortfolioDoc.isEmpty()) {
 			userPortfolio=userPortfolioDoc.get();
@@ -72,7 +74,7 @@ public class TradeManagementService {
 			}else {
 				//create user portfolio
 				userPortfolio=new UserPortfolio();
-				userPortfolio.setId("e82b2e4a-942c-493e-9fb6-5ba3eceef145");
+				userPortfolio.setId(USER_ID);
 				Map<String,Holding> holdings=new HashMap<>();
 				Holding holding=createNewStockHolding(trade);
 				holdings.put(trade.getStock().getId(), holding);
@@ -131,6 +133,7 @@ public class TradeManagementService {
 		trade.setQty(addTradeRequest.getQty());
 		trade.setStock(addTradeRequest.getStock());
 		trade.setType(addTradeRequest.getTradeType());
+		trade.setUserId(USER_ID);
 		return trade;
 	}
 }

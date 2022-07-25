@@ -2,8 +2,10 @@ package com.assignment.smallcase.service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import com.assignment.smallcase.exception.NoTradeFoundException;
 import com.assignment.smallcase.exception.NotEnoughQuantityToSellException;
+import com.assignment.smallcase.exception.NothingToUpdateException;
 import com.assignment.smallcase.exception.PortfolioTrackingApiException;
 import com.assignment.smallcase.exception.TradeRemovalException;
 import com.assignment.smallcase.model.Holding;
@@ -37,13 +40,23 @@ public class TradeManagementService {
 	public ResponseEntity<AddTradeResponse> addTrade(String tradeId, AddTradeRequest addTradeRequest) {
 		AddTradeResponse addTradeResponse = new AddTradeResponse();
 		Trade trade = createTradeModelFromRequest(addTradeRequest);
+		UserPortfolio result=null;
 		try {
 			if (tradeId != null) {
-				updateTrade(tradeId, trade);
-			} else
-				executeTrade(trade);
-			addTradeResponse.setMessage("Trade Added Successfully");
-			tradeRepository.save(trade);
+				trade.setId(tradeId);
+				result=updateTrade(tradeId, trade);
+				addTradeResponse.setMessage("Trade Updated Successfully");				
+			} else {
+				Optional<UserPortfolio> userPortfolioDoc = portfolioRepo.findById(USER_ID);
+				result=executeTrade(trade,userPortfolioDoc);
+				addTradeResponse.setMessage("Trade Added Successfully");
+			}
+			if(result!=null) {
+				updateTotalInvestment(result);
+				portfolioRepo.save(result);
+				tradeRepository.save(trade);
+			}
+		
 		} catch (final PortfolioTrackingApiException folioTrackingApi) {
 			Throwable temp = ExceptionUtils.getCause(folioTrackingApi);
 			if (temp instanceof NotEnoughQuantityToSellException)
@@ -53,8 +66,7 @@ public class TradeManagementService {
 
 	}
 
-	private void executeTrade(Trade trade) throws PortfolioTrackingApiException {
-		Optional<UserPortfolio> userPortfolioDoc = portfolioRepo.findById(USER_ID);
+	private UserPortfolio executeTrade(Trade trade,Optional<UserPortfolio> userPortfolioDoc) throws PortfolioTrackingApiException {
 		UserPortfolio userPortfolio = null;
 		if (!userPortfolioDoc.isEmpty()) {
 			userPortfolio = userPortfolioDoc.get();
@@ -89,7 +101,8 @@ public class TradeManagementService {
 				userPortfolio.setCurrentValue(holding.getQty() * extService.getCurrentStockPrice(trade.getStock()));
 			}
 			// save userportfolio
-			portfolioRepo.save(userPortfolio);
+			//portfolioRepo.save(userPortfolio);
+			return userPortfolio;
 		} else {
 
 			// if SELL Trade
@@ -99,12 +112,15 @@ public class TradeManagementService {
 					// check if sufficient quantity available to sell
 					if (userStockHolding.getQty() >= trade.getQty()) {
 						userStockHolding.setQty(userStockHolding.getQty() - trade.getQty());
+						if((userStockHolding.getQty() - trade.getQty())==0)
+							userStockHolding.setAvgBuy(0.00);
 						userPortfolio.setTotalInvestment(
 								userPortfolio.getTotalInvestment() - (trade.getQty() * trade.getPrice()));
 						userPortfolio.setCurrentValue(userPortfolio.getCurrentValue()
 								- (trade.getQty() * extService.getCurrentStockPrice(trade.getStock())));
 						userPortfolio.getHoldings().put(trade.getStock().getId(), userStockHolding);
-						portfolioRepo.save(userPortfolio);
+					//	portfolioRepo.save(userPortfolio);
+						return userPortfolio;
 					} else {
 						// Throw Not enough quantity to sell
 						throw new NotEnoughQuantityToSellException();
@@ -114,7 +130,6 @@ public class TradeManagementService {
 					throw new NotEnoughQuantityToSellException();
 
 				}
-				userPortfolio.getHoldings().put(trade.getStock().getId(), userStockHolding);
 			} else {
 				// THROW Exception Portfolio Doesn't Exist
 				throw new NotEnoughQuantityToSellException();
@@ -125,7 +140,7 @@ public class TradeManagementService {
 
 	}
 
-	private void updateTrade(String tradeId, Trade userUpdatedTradeModel) throws PortfolioTrackingApiException {
+	private UserPortfolio updateTrade(String tradeId, Trade userUpdatedTradeModel) throws PortfolioTrackingApiException {
 		Optional<Trade> oldTradeModel = tradeRepository.findById(tradeId);
 		if (oldTradeModel.isEmpty()) {
 			throw new NoTradeFoundException();
@@ -142,9 +157,82 @@ public class TradeManagementService {
 						&& (userStockHolding.getQty() - oldTradeModel.get().getQty()) == 0) {
 					throw new NotEnoughQuantityToSellException();
 				}
+				//remove the old trade
+				Optional<UserPortfolio> updatedUserPortfolioDoc=removeTradeFromUserStockHolding(oldTradeModel.get());
+				//now execute the fresh trade
+				return executeTrade(userUpdatedTradeModel,updatedUserPortfolioDoc);
+			    //update trade details
+			//	tradeRepository.save(userUpdatedTradeModel);
 			}
+			if((oldTradeModel.get().getQty()-userUpdatedTradeModel.getQty())==0 && Double.compare(oldTradeModel.get().getPrice(),userUpdatedTradeModel.getPrice())==0) {
+				throw new NothingToUpdateException();
+			}
+			int delta=userUpdatedTradeModel.getQty()-oldTradeModel.get().getQty();
+			if(userUpdatedTradeModel.getType().equals(TradeType.BUY)) {
+				if(delta<0 && userStockHolding.getQty()-Math.abs(delta)<0) {
+					throw new NotEnoughQuantityToSellException();
+				}
+				
+				if(userStockHolding.getQty()-oldTradeModel.get().getQty()<=0) {
+					userStockHolding.setAvgBuy(0.0);
+				}else
+					userStockHolding.setAvgBuy((userStockHolding.getAvgBuy()*userStockHolding.getQty()-oldTradeModel.get().getPrice()*oldTradeModel.get().getQty())/(userStockHolding.getQty()-oldTradeModel.get().getQty()));
+				userStockHolding.setAvgBuy((userStockHolding.getAvgBuy()* (userStockHolding.getQty()-oldTradeModel.get().getQty()) + userUpdatedTradeModel.getPrice()*userUpdatedTradeModel.getQty())/(userStockHolding.getQty()-oldTradeModel.get().getQty() + userUpdatedTradeModel.getQty()));
+				if(delta==0) {
+					 userPortfolioDoc.get().getHoldings().put(oldTradeModel.get().getStock().getId(), userStockHolding);
+					 //save userPortfolioDoc
+					 //portfolioRepo.save(userPortfolioDoc.get());
+					 return userPortfolioDoc.get();
+				}else if(delta>0) {
+					userStockHolding.setQty(userStockHolding.getQty()+delta);
+					userPortfolioDoc.get().getHoldings().put(oldTradeModel.get().getStock().getId(), userStockHolding);
+					 //save userPortfolioDoc
+					 //portfolioRepo.save(userPortfolioDoc.get());
+					return userPortfolioDoc.get();
+				}else {
+					userStockHolding.setQty(userStockHolding.getQty()-Math.abs(delta));
+					userPortfolioDoc.get().getHoldings().put(oldTradeModel.get().getStock().getId(), userStockHolding);
+					 //save userPortfolioDoc
+					// portfolioRepo.save(userPortfolioDoc.get());
+					return userPortfolioDoc.get();
+				}
+			}else {
+				if(delta>0 && userStockHolding.getQty()-delta<0)
+					throw new NotEnoughQuantityToSellException();
+				if(delta>0) {
+					userStockHolding.setQty(userStockHolding.getQty()-delta);
+					userPortfolioDoc.get().getHoldings().put(oldTradeModel.get().getStock().getId(), userStockHolding);
+					 //save userPortfolioDoc
+					 //portfolioRepo.save(userPortfolioDoc.get());
+					return userPortfolioDoc.get();
+				}else {
+					if(userStockHolding.getQty()==0) {
+						throw new NotEnoughQuantityToSellException();
+					}
+					userStockHolding.setQty(userStockHolding.getQty()+Math.abs(delta));
+					userPortfolioDoc.get().getHoldings().put(oldTradeModel.get().getStock().getId(), userStockHolding);
+					 //save userPortfolioDoc
+					 //portfolioRepo.save(userPortfolioDoc.get());
+					return userPortfolioDoc.get();
+				}
+			}
+			
 		}
+		//tradeRepository.save(userUpdatedTradeModel); 
 	}
+	
+	private UserPortfolio updateTotalInvestment(UserPortfolio userPortfolio) {
+		Double totalInvestment=0.0;
+		Double currentInvestment=0.00;
+		for(Holding holding:userPortfolio.getHoldings().values()) {
+			totalInvestment+=holding.getAvgBuy()*holding.getQty();
+			currentInvestment+=holding.getQty()*100;
+		}
+		userPortfolio.setCurrentValue(currentInvestment);
+		userPortfolio.setTotalInvestment(totalInvestment);
+		return userPortfolio;
+	}
+	
 
 	private Holding createNewStockHolding(Trade trade) {
 		Holding userStockHolding = new Holding();
@@ -165,7 +253,7 @@ public class TradeManagementService {
 		return trade;
 	}
 
-	private void removeTradeFromUserStockHolding(Trade trade) throws PortfolioTrackingApiException {
+	private Optional<UserPortfolio> removeTradeFromUserStockHolding(Trade trade) throws PortfolioTrackingApiException {
 		Optional<UserPortfolio> userPortfolioDoc = portfolioRepo.findById(USER_ID);
 		Holding userStockHolding = userPortfolioDoc.get().getHoldings().get(trade.getStock().getId());
 		if (trade.getType().equals(TradeType.BUY)) {
@@ -177,6 +265,10 @@ public class TradeManagementService {
 					
 					userStockHolding.setQty(userStockHolding.getQty()-trade.getQty());
 					userPortfolioDoc.get().getHoldings().put(trade.getStock().getId(), userStockHolding);
+				}else {
+					userStockHolding.setAvgBuy(0.0);
+					userStockHolding.setQty(0);
+					userPortfolioDoc.get().getHoldings().put(trade.getStock().getId(), userStockHolding);
 				}
 
 			} else {
@@ -187,6 +279,7 @@ public class TradeManagementService {
 			userPortfolioDoc.get().getHoldings().put(trade.getStock().getId(), userStockHolding);
 		}
 		//save updated doc
-		portfolioRepo.save(userPortfolioDoc.get());
+	//	portfolioRepo.save(userPortfolioDoc.get());
+		return userPortfolioDoc;
 	}
 }

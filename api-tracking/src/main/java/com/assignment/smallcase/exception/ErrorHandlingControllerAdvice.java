@@ -29,5 +29,31 @@ public class ErrorHandlingControllerAdvice {
     error.setMessage(e.getMessage());
     return error;
   }
-
+  
+  @ExceptionHandler(NoTradeFoundException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  AddTradeResponse onNoTradeFoundException(NoTradeFoundException e) {
+    AddTradeResponse error = new AddTradeResponse();
+    error.setMessage(e.getMessage());
+    return error;
+  }
+  
+  @ExceptionHandler(TradeRemovalException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  AddTradeResponse onTradeRemovalException(TradeRemovalException e) {
+    AddTradeResponse error = new AddTradeResponse();
+    error.setMessage(e.getMessage());
+    return error;
+  }
+  
+  @ExceptionHandler(NothingToUpdateException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  AddTradeResponse onNothingToUpdateException(NothingToUpdateException e) {
+    AddTradeResponse error = new AddTradeResponse();
+    error.setMessage(e.getMessage());
+    return error;
+  }
 }

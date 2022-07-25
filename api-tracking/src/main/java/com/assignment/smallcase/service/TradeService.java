@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.assignment.smallcase.exception.NoTradeFoundException;
 import com.assignment.smallcase.model.Trade;
 import com.assignment.smallcase.repository.TradeRepository;
 
@@ -22,7 +23,7 @@ public class TradeService {
 	public ResponseEntity<Trade> getTradeById(String tradeId){
 		Optional<Trade> trade=tradeRepository.findById(tradeId);
 		if(trade.isEmpty())
-			return ResponseEntity.ok(null);
+			throw new NoTradeFoundException();
 		return ResponseEntity.ok(trade.get());
 	}
 }

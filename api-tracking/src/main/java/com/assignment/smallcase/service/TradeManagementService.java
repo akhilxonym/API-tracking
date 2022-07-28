@@ -32,7 +32,8 @@ public class TradeManagementService {
 	private PortfolioRepository portfolioRepo;
 	@Autowired
 	private TradeRepository tradeRepository;
-
+	@Autowired
+	private TradeService tradeService;
 	@Autowired
 	private ExternalService extService;
 	public static final String USER_ID = "e82b2e4a-942c-493e-9fb6-5ba3eceef145";
@@ -64,6 +65,16 @@ public class TradeManagementService {
 		}
 		return ResponseEntity.ok().body(addTradeResponse);
 
+	}
+	
+	public ResponseEntity<String> removeTrade(String tradeId){
+		Trade trade=tradeService.getTradeById(tradeId).getBody();
+		Optional<UserPortfolio> userPortfolio=removeTradeFromUserStockHolding(trade);
+		if(!userPortfolio.isEmpty()) {
+			portfolioRepo.save(userPortfolio.get());
+			return ResponseEntity.accepted().body("Trade has been removed successfully");
+		}else
+			throw new TradeRemovalException();
 	}
 
 	private UserPortfolio executeTrade(Trade trade,Optional<UserPortfolio> userPortfolioDoc) throws PortfolioTrackingApiException {

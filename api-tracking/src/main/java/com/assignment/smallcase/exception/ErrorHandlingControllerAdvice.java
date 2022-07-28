@@ -56,4 +56,12 @@ public class ErrorHandlingControllerAdvice {
     error.setMessage(e.getMessage());
     return error;
   }
+  @ExceptionHandler(NoStockFoundException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  AddTradeResponse onNoStockFoundException(NoStockFoundException e) {
+    AddTradeResponse error = new AddTradeResponse();
+    error.setMessage(e.getMessage());
+    return error;
+  }
 }

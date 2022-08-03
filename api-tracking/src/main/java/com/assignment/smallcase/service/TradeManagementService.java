@@ -165,7 +165,7 @@ public class TradeManagementService {
 			if (!oldStockId.equals(userUpdatedStockId) || (oldStockId.equals(userUpdatedStockId)
 					&& !oldTradeModel.get().getType().equals(userUpdatedTradeModel.getType()))) {
 				if (oldTradeModel.get().getType().equals(TradeType.BUY)
-						&& (userStockHolding.getQty() - oldTradeModel.get().getQty()) == 0) {
+						&& (userStockHolding.getQty() - oldTradeModel.get().getQty()) < 0) {
 					throw new NotEnoughQuantityToSellException();
 				}
 				//remove the old trade
